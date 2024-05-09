@@ -13,9 +13,10 @@ import numpy as np
 ########  LOAD THE DATASET   ############
 #train: 1020, validation: 1020, test: 6149, total: 8189
 
-batch_size = 32
-img_size = 32
-img_crop = 32
+batch_size = 32 #the larger this is, the more epochs it takes for the loss to start decreasing (???)
+img_size = 32 #this can be changed (but it seems to work best at 32 - does this mean all images are scaled to 32x32? seems small)
+#16,200 => 6%, 32,32 => 13% and 10%, 16,64 => 11%, 16,32 => 11%
+img_crop = 32 #i think this has to stay at 32
 
 #transform to convert from PIL image (0 - 1) to tensors with a range of (-1 - 1)
 transform = transforms.Compose(
@@ -89,11 +90,14 @@ net.to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
 
-mini_batch_size = (1020 / batch_size) // 5
+mini_batch_size = (1020 / batch_size) // 10 #num mini-batches = divisor + 1
+#leaving this variable the same but REDUCING batch size => larger loss?
+#leaving batch size the same but increasing the divisor => MAKES NO DIFFERENCE!!!!!!!!
+num_epochs = 100
 
 #train the network
 #loop over our data iterator, and feed the inputs to the network and optimise
-for epoch in range(20):  # loop over the dataset multiple times
+for epoch in range(num_epochs):  # loop over the dataset multiple times
 
     running_loss = 0.0
 
@@ -117,7 +121,7 @@ for epoch in range(20):  # loop over the dataset multiple times
         # print statistics
         running_loss += loss.item()
         if i % mini_batch_size == 0:    #WHAT IS THIS DOING? CHANGING THIS DRAMATICALLY EFFECTS THE LOSS!!
-            print("Epoch " + str(epoch+1) + " Batch " + str(i) + " : Loss = " + str(running_loss))
+            print("Epoch " + str(epoch+1) + "/" + str(num_epochs) + " [" + str(i * batch_size) + "/1020]" + " : Loss = " + str(running_loss))
             running_loss = 0.0
 
 print('Finished Training')
@@ -143,7 +147,7 @@ print(f'Accuracy of the network on the 6149 test images: {100 * correct // total
 
 #TO DO:
 """
-Use scipy to read included .mat files
+Use scipy to read included .mat files????
 Use the validation set to calculate accuracy as the network is training
 Change the network architecture based on research
 Tweak hyperparameters endlessly
