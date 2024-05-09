@@ -83,7 +83,7 @@ class Net(nn.Module):
 #instantiate network
 net = Net()
 #go over all modules and set parameters and buffers to CUDA tensors
-#net.to(device)
+net.to(device)
 
 #define a loss function and optimiser
 criterion = nn.CrossEntropyLoss()
@@ -99,9 +99,9 @@ for epoch in range(2):  # loop over the dataset multiple times
     for i, data in enumerate(train_loader, 0):
         # get the inputs; data is a list of [inputs, labels]
         #FOR CPU: 
-        inputs, labels = data
+        #inputs, labels = data
         #FOR GPU:
-        #inputs, labels = data[0].to(device), data[1].to(device)
+        inputs, labels = data[0].to(device), data[1].to(device)
 
         # zero the parameter gradients
         optimizer.zero_grad()
@@ -114,8 +114,34 @@ for epoch in range(2):  # loop over the dataset multiple times
 
         # print statistics
         running_loss += loss.item()
-        if i % 200 == 0:    #WHAT IS THIS DOING? CHANGING THIS DRAMATICALLY EFFECTS THE LOSS!!
+        if i % 10 == 0:    #WHAT IS THIS DOING? CHANGING THIS DRAMATICALLY EFFECTS THE LOSS!!
             print("Epoch " + str(epoch+1) + " Batch " + str(i) + " : Loss = " + str(running_loss))
             running_loss = 0.0
 
 print('Finished Training')
+
+#make predictions for the whole dataset
+correct = 0
+total = 0
+# since we're not training, we don't need to calculate the gradients for our outputs
+with torch.no_grad():
+    for data in test_loader:
+        #FOR CPU: 
+        #images, labels = data
+        #FOR GPU:
+        images, labels = data[0].to(device), data[1].to(device)
+        # calculate outputs by running images through the network
+        outputs = net(images)
+        # the class with the highest energy is what we choose as prediction
+        _, predicted = torch.max(outputs.data, 1)
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
+
+print(f'Accuracy of the network on the 6149 test images: {100 * correct // total} %')
+
+#TO DO:
+"""
+Use the validation set to calculate accuracy as the network is training
+Change the network architecture based on research
+Tweak hyperparameters endlessly
+"""
