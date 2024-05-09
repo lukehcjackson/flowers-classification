@@ -103,9 +103,6 @@ for epoch in range(2):  # loop over the dataset multiple times
         #FOR GPU:
         #inputs, labels = data[0].to(device), data[1].to(device)
 
-        #print(str(inputs) + " : " + str(labels))
-        #print(str(i))
-
         # zero the parameter gradients
         optimizer.zero_grad()
 
@@ -117,9 +114,8 @@ for epoch in range(2):  # loop over the dataset multiple times
 
         # print statistics
         running_loss += loss.item()
-        if i % 2000 == 0:    # print every 20 mini-batches
+        if i % 200 == 0:    #WHAT IS THIS DOING? CHANGING THIS DRAMATICALLY EFFECTS THE LOSS!!
             print("Epoch " + str(epoch+1) + " Batch " + str(i) + " : Loss = " + str(running_loss))
-            #print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}')
             running_loss = 0.0
 
 print('Finished Training')
