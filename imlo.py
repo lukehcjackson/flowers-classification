@@ -13,7 +13,7 @@ import numpy as np
 ########  LOAD THE DATASET   ############
 #train: 1020, validation: 1020, test: 6149, total: 8189
 
-batch_size = 32 #the larger this is, the more epochs it takes for the loss to start decreasing (???)
+batch_size = 64 #the larger this is, the more epochs it takes for the loss to start decreasing (???)
 img_size = 32 #this can be changed (but it seems to work best at 32 - does this mean all images are scaled to 32x32? seems small)
 #16,200 => 6%, 32,32 => 13% and 10%, 16,64 => 11%, 16,32 => 11%
 img_crop = 32 #i think this has to stay at 32
