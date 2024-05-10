@@ -65,9 +65,9 @@ class Net(nn.Module):
     #neural network as before, but modified to take 3-channel images
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.conv1 = nn.Conv2d(3, 12, 5)
         self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.conv2 = nn.Conv2d(12, 16, 5)
         self.fc1 = nn.Linear(16 * 5 * 5, 120)
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 103) #second argument is number of classes in dataset
@@ -91,7 +91,7 @@ mini_batch_size = (1020 / batch_size) // 10 #num mini-batches = divisor + 1
 #leaving batch size the same but increasing the divisor => MAKES NO DIFFERENCE!!!!!!!!
 num_epochs = 100
 
-learning_rate = 0.01
+learning_rate = 0.02
 #decay = learning_rate / num_epochs
 decay = 0.001 #increase => faster lr decreases
 
@@ -129,6 +129,7 @@ for epoch in range(num_epochs):  # loop over the dataset multiple times
             running_loss = 0.0
 
     learning_rate = learning_rate * (1 / (1 + decay * epoch))
+    #this is literally changing nothing
     print("Learning rate:", learning_rate)
 
 print('Finished Training')
