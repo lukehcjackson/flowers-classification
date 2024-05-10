@@ -86,14 +86,18 @@ net = Net()
 #go over all modules and set parameters and buffers to CUDA tensors
 net.to(device)
 
-#define a loss function and optimiser
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
-
 mini_batch_size = (1020 / batch_size) // 10 #num mini-batches = divisor + 1
 #leaving this variable the same but REDUCING batch size => larger loss?
 #leaving batch size the same but increasing the divisor => MAKES NO DIFFERENCE!!!!!!!!
 num_epochs = 100
+
+learning_rate = 0.01
+#decay = learning_rate / num_epochs
+decay = 0.001 #increase => faster lr decreases
+
+#define a loss function and optimiser
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=0.9)
 
 #train the network
 #loop over our data iterator, and feed the inputs to the network and optimise
@@ -123,6 +127,9 @@ for epoch in range(num_epochs):  # loop over the dataset multiple times
         if i % mini_batch_size == 0:    #WHAT IS THIS DOING? CHANGING THIS DRAMATICALLY EFFECTS THE LOSS!!
             print("Epoch " + str(epoch+1) + "/" + str(num_epochs) + " [" + str(i * batch_size) + "/1020]" + " : Loss = " + str(running_loss))
             running_loss = 0.0
+
+    learning_rate = learning_rate * (1 / (1 + decay * epoch))
+    print("Learning rate:", learning_rate)
 
 print('Finished Training')
 
