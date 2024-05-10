@@ -129,7 +129,8 @@ for epoch in range(num_epochs):  # loop over the dataset multiple times
             running_loss = 0.0
 
     learning_rate = learning_rate * (1 / (1 + decay * epoch))
-    #this is literally changing nothing
+    for group in optimizer.param_groups:
+        group['lr'] = learning_rate
     print("Learning rate:", learning_rate)
 
 print('Finished Training')
