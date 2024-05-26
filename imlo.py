@@ -2,7 +2,7 @@
 
 import torch
 import torchvision
-import torchvision.transforms as transforms
+import torchvision.transforms.v2 as transforms
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -16,21 +16,38 @@ def load_dataset():
     #train: 1020, validation: 1020, test: 6149, total: 8189
 
     #transform to convert from PIL image (0 - 1) to tensors with a range of (-1 - 1)
-    transform = transforms.Compose(
-        [transforms.Resize(size = img_size), #resizes the images to be all the same size -> determines resolution
+    standardTransform = transforms.Compose(
+        [transforms.ToImage(),
+        transforms.ToDtype(torch.uint8, scale=True),
+        transforms.Resize(size = img_size), #resizes the images to be all the same size -> determines resolution
         transforms.CenterCrop(img_crop), #crops the image from the center -> determines scale
-        transforms.ToTensor(),
+        transforms.ToDtype(torch.float32, scale=True),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]) #using known mean and standard deviation
+    
+    trainingTransform = transforms.Compose(
+        [transforms.ToImage(),
+        transforms.ToDtype(torch.uint8, scale=True),
+        transforms.RandomResizedCrop(size=img_crop, antialias=True),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.ToDtype(torch.float32, scale=True),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
 
     #DEFINE TRAIN / VALIDATION / TEST SETS (splits come from the dataset itself)
-    train_set = torchvision.datasets.Flowers102(root='./data', split="train", download=True, transform=transform)
+    unmodified_train_set = torchvision.datasets.Flowers102(root='./data', split="train", download=True, transform=standardTransform)
+    transformed_train_set = torchvision.datasets.Flowers102(root='./data', split="train", download=True, transform=trainingTransform)
+    #training data set is really small so we want to increase the size of the training set => concatenate untransformed and transformed data
+    train_set = torch.utils.data.ConcatDataset([unmodified_train_set, transformed_train_set])
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True)
 
-    validation_set = torchvision.datasets.Flowers102(root='./data', split="val", download=True, transform=transform)
+    validation_set = torchvision.datasets.Flowers102(root='./data', split="val", download=True, transform=standardTransform)
     validation_loader = torch.utils.data.DataLoader(validation_set, batch_size=batch_size, shuffle=True)
 
-    test_set = torchvision.datasets.Flowers102(root='./data', split="test", download=True, transform=transform)
+    test_set = torchvision.datasets.Flowers102(root='./data', split="test", download=True, transform=standardTransform)
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=True)
+
+    print(len(train_set))
+    print(len(validation_set))
+    print(len(test_set))
 
     return train_loader, validation_loader, test_loader
 
@@ -77,7 +94,7 @@ def train_network(net, train_loader, validation_loader, optimizer, criterion, le
             running_loss += loss.item()
 
             if i % mini_batch_size == 0:    #WHAT IS THIS DOING? CHANGING THIS DRAMATICALLY EFFECTS THE LOSS!!
-                print("Epoch " + str(epoch+1) + "/" + str(num_epochs) + " [" + str(i * batch_size) + "/1020]" + " : Loss = " + str(running_loss))
+                print("Epoch " + str(epoch+1) + "/" + str(num_epochs) + " [" + str(i * batch_size) + "/2040]" + " : Loss = " + str(running_loss))
                 running_loss = 0.0
                 
 
@@ -157,7 +174,7 @@ def test_network(net, test_loader):
 #-------------MAIN------------------
 
 #Load the dataset into dataloaders using the official splits
-batch_size = 64 #the larger this is, the more epochs it takes for the loss to start decreasing (???)
+batch_size = 64
 img_size = 256
 img_crop = 224 
 train_loader, validation_loader, test_loader = load_dataset()
@@ -171,7 +188,7 @@ print(device)
 net = define_network()
 net.to(device)
 
-learning_rate = 0.02 #0.02
+learning_rate = 0.01 #0.02
 #decay = learning_rate / num_epochs
 decay = 0.001 #increase => faster lr decreases
 
@@ -181,7 +198,7 @@ optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=0.9)
 
 #Define hyperparameters
 mini_batch_size = 1 #each mini-batch is batch_size (64) x mini_batch_size images
-num_epochs = 5
+num_epochs = 100
 
 #Train the network
 train_network(net, train_loader, validation_loader, optimizer, criterion, learning_rate, decay, batch_size, mini_batch_size)
