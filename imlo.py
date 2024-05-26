@@ -9,6 +9,7 @@ import torch.optim as optim
 
 import matplotlib.pyplot as plt
 import numpy as np
+import datetime
 
 def load_dataset():
     
@@ -165,6 +166,9 @@ def test_network(net, test_loader):
 
 #-------------MAIN------------------
 
+#Time the model
+startTime = datetime.datetime.now()
+
 #Load the dataset into dataloaders using the official splits
 batch_size = 64
 img_size = 256
@@ -182,7 +186,7 @@ net.to(device)
 
 learning_rate = 0.01 #0.02
 #decay = learning_rate / num_epochs
-decay = 0.001 #increase => faster lr decreases
+decay = 0.0001 #increase => faster lr decreases
 
 #define a loss function and optimiser
 criterion = nn.CrossEntropyLoss()
@@ -197,3 +201,8 @@ train_network(net, train_loader, validation_loader, optimizer, criterion, learni
 
 #Test the network
 test_network(net, test_loader)
+
+#Display total time to run
+endTime = datetime.datetime.now()
+timeDiff = startTime - endTime
+print(timeDiff)
