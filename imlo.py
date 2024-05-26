@@ -53,7 +53,7 @@ def define_network():
         
     return Net()
 
-def train_network(net, train_loader, optimizer, criterion, learning_rate, decay, batch_size, mini_batch_size):
+def train_network(net, train_loader, validation_loader, optimizer, criterion, learning_rate, decay, batch_size, mini_batch_size):
 
     for epoch in range(num_epochs):
 
@@ -82,15 +82,12 @@ def train_network(net, train_loader, optimizer, criterion, learning_rate, decay,
                 
 
         #validation - once per epoch
-        net.eval()
-        with torch.no_grad():
-            validation_loss, validation_accuracy = validate_network(net, validation_loader, criterion)
+        validation_loss, validation_accuracy = validate_network(net, validation_loader, criterion)
 
         print("Epoch " + str(epoch+1) + "/" + str(num_epochs) +
-                " Training Loss = " + str(running_loss/mini_batch_size) +
-                " Validation Loss = " + str(round(validation_loss/1020 ,5)) +
-                " Validation Accuracy = " + str((round(validation_accuracy/1020 ,5))*100) + "%" )
-        net.train()
+                #" Training Loss = " + str(running_loss/mini_batch_size) +
+                " Validation Loss = " + str(round(validation_loss ,5)) +
+                " Validation Accuracy = " + str((round(validation_accuracy, 5))*100) + "%" )
 
         learning_rate = learning_rate * (1 / (1 + decay * epoch))
         for group in optimizer.param_groups:
@@ -101,8 +98,29 @@ def train_network(net, train_loader, optimizer, criterion, learning_rate, decay,
 
 def validate_network(net, validation_loader, criterion):
     validation_loss = 0
-    validation_accuracy = 0
+    correct = 0
+    total = 0
 
+    net.eval()
+
+    with torch.no_grad():
+        for i,data in enumerate(validation_loader):
+            vimages, vlabels = data[0].to(device), data[1].to(device)
+            voutputs = net(vimages)
+
+            validation_loss += criterion(voutputs, vlabels).item()
+
+            _, predicted = torch.max(voutputs.data, 1)
+            total += vlabels.size(0)
+            correct += (predicted == vlabels).sum().item()
+
+    net.train(True)
+
+    validation_loss = validation_loss / total
+    validation_accuracy = correct / total
+    return validation_loss, validation_accuracy
+
+"""
     for i, data in enumerate(validation_loader):
         inputs, labels = data[0].to(device), data[1].to(device)
         outputs = net(inputs)
@@ -114,7 +132,7 @@ def validate_network(net, validation_loader, criterion):
         validation_accuracy += equality.type(torch.FloatTensor).mean()
 
     return validation_loss, validation_accuracy.item()
-
+"""
 def test_network(net, test_loader):
     #make predictions for the whole dataset
     correct = 0
@@ -163,10 +181,10 @@ optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=0.9)
 
 #Define hyperparameters
 mini_batch_size = 1 #each mini-batch is batch_size (64) x mini_batch_size images
-num_epochs = 30
+num_epochs = 5
 
 #Train the network
-train_network(net, train_loader, optimizer, criterion, learning_rate, decay, batch_size, mini_batch_size)
+train_network(net, train_loader, validation_loader, optimizer, criterion, learning_rate, decay, batch_size, mini_batch_size)
 
 #Test the network
 test_network(net, test_loader)
