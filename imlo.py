@@ -9,7 +9,7 @@ import torch.optim as optim
 
 import matplotlib.pyplot as plt
 import numpy as np
-import datetime
+import time
 
 def load_dataset():
     
@@ -68,7 +68,57 @@ def define_network():
             x = self.fc(x.reshape(x.shape[0], -1))
             return x
         
-    return Net()
+    #Implementation of AlexNet
+    class AlexNet(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.conv1 = nn.Sequential(
+                nn.Conv2d(in_channels = 3, out_channels = 96, kernel_size = (11,11), stride = (4,4), padding = 0),
+                nn.BatchNorm2d(96),
+                nn.ReLU(),
+                nn.MaxPool2d(kernel_size = (3,3), stride = (2,2)))
+            self.conv2 = nn.Sequential(
+                nn.Conv2d(in_channels = 96, out_channels = 256, kernel_size = (5,5), stride = (1,1), padding = (2,2)),
+                nn.BatchNorm2d(256),
+                nn.ReLU(),
+                nn.MaxPool2d(kernel_size = (3,3), stride = (2,2)))
+            self.conv3 = nn.Sequential(
+                nn.Conv2d(in_channels = 256, out_channels = 384, kernel_size = (3,3), stride = (1,1), padding = (1,1)),
+                nn.BatchNorm2d(384),
+                nn.ReLU())
+            self.conv4 = nn.Sequential(
+                nn.Conv2d(in_channels = 384, out_channels = 384, kernel_size = (3,3), stride = (1,1), padding = (1,1)),
+                nn.BatchNorm2d(384),
+                nn.ReLU())
+            self.conv5 = nn.Sequential(
+                nn.Conv2d(in_channels = 384, out_channels = 256, kernel_size = (3,3), stride = (1,1), padding = (1,1)),
+                nn.BatchNorm2d(256),
+                nn.ReLU(),
+                nn.MaxPool2d(kernel_size = (3,3), stride = (2,2)))
+            self.fc1 = nn.Sequential(
+                nn.Dropout(0.5),
+                nn.Linear(9216, 4096),
+                nn.ReLU())
+            self.fc2 = nn.Sequential(
+                nn.Dropout(0.5),
+                nn.Linear(4096, 4096),
+                nn.ReLU())
+            self.fc3 = nn.Linear(4096, 102)
+        
+        def forward(self, x):
+            x = self.conv1(x)
+            x = self.conv2(x)
+            x = self.conv3(x)
+            x = self.conv4(x)
+            x = self.conv5(x)
+            x = x.reshape(x.shape[0], -1)
+            x = self.fc1(x)
+            x = self.fc2(x)
+            x = self.fc3(x)
+            return x
+            
+        
+    return AlexNet()
 
 def train_network(net, train_loader, validation_loader, optimizer, criterion, learning_rate, decay, mini_batch_size):
 
@@ -97,9 +147,9 @@ def train_network(net, train_loader, validation_loader, optimizer, criterion, le
             running_loss += loss.item()
 
             #reset the running loss every so often
-            if i % mini_batch_size == 0:
-                print("Epoch " + str(epoch+1) + "/" + str(num_epochs) + " [" + str(i * batch_size) + "/2040]" + " : Loss = " + str(running_loss))
-                running_loss = 0.0
+            #if i % mini_batch_size == 0:
+                #print("Epoch " + str(epoch+1) + "/" + str(num_epochs) + " [" + str(i * batch_size) + "/2040]" + " : Loss = " + str(running_loss))
+                #running_loss = 0.0
                 
 
         #validation - once per epoch
@@ -167,12 +217,12 @@ def test_network(net, test_loader):
 #-------------MAIN------------------
 
 #Time the model
-startTime = datetime.datetime.now()
+startTime = time.time()
 
 #Load the dataset into dataloaders using the official splits
 batch_size = 64
 img_size = 256
-img_crop = 224 
+img_crop = 227
 train_loader, validation_loader, test_loader = load_dataset()
 
 #Define the device we are using
@@ -184,18 +234,18 @@ print(device)
 net = define_network()
 net.to(device)
 
-learning_rate = 0.001 #0.02
+learning_rate = 0.01 #0.02
 #decay = learning_rate / num_epochs
 decay = 0.0001 #increase => faster lr decreases
 
 #define a loss function and optimiser
 criterion = nn.CrossEntropyLoss()
-#optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=0.9)
-optimizer = optim.Adam(net.parameters(), lr=learning_rate, weight_decay=0.001)
+optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=0.9)
+#optimizer = optim.Adam(net.parameters(), lr=learning_rate, weight_decay=0.001)
 
 #Define hyperparameters
 mini_batch_size = 1 #each mini-batch is batch_size (64) x mini_batch_size images
-num_epochs = 100
+num_epochs = 30
 
 #Train the network
 train_network(net, train_loader, validation_loader, optimizer, criterion, learning_rate, decay, mini_batch_size)
@@ -204,6 +254,6 @@ train_network(net, train_loader, validation_loader, optimizer, criterion, learni
 test_network(net, test_loader)
 
 #Display total time to run
-endTime = datetime.datetime.now()
+endTime = time.time()
 timeDiff = startTime - endTime
-print(timeDiff)
+print(str(timeDiff / 60) + " minutes")
