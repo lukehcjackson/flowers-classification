@@ -9,7 +9,7 @@ import torch.optim as optim
 
 import matplotlib.pyplot as plt
 import numpy as np
-import time
+from datetime import datetime
 
 def load_dataset():
     
@@ -29,7 +29,7 @@ def load_dataset():
         [transforms.ToImage(),
         transforms.ToDtype(torch.uint8, scale=True),
         #transforms.RandomAffine(20, translate=(0.2, 0.2), scale=(0.75, 1.25)),
-        #transforms.RandomRotation(30),
+        transforms.RandomRotation(30),
         transforms.RandomResizedCrop(size=img_crop, antialias=True),
         transforms.RandomHorizontalFlip(p=0.5),
         transforms.ToDtype(torch.float32, scale=True),
@@ -44,15 +44,16 @@ def load_dataset():
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True)
 
     validation_set = torchvision.datasets.Flowers102(root='./data', split="val", download=True, transform=standardTransform)
-    validation_loader = torch.utils.data.DataLoader(validation_set, batch_size=batch_size, shuffle=True)
+    validation_loader = torch.utils.data.DataLoader(validation_set, batch_size=batch_size, shuffle=False)
 
     test_set = torchvision.datasets.Flowers102(root='./data', split="test", download=True, transform=standardTransform)
-    test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=True)
+    test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False)
 
     return train_loader, validation_loader, test_loader
 
 def define_network():
     #Define CNN
+    """
     class Net(nn.Module):
         #neural network as before, but modified to take 3-channel images
         def __init__(self):
@@ -67,6 +68,7 @@ def define_network():
             x = self.pool(F.relu(self.conv2(x)))
             x = self.fc(x.reshape(x.shape[0], -1))
             return x
+    """
         
     #Implementation of AlexNet
     class AlexNet(nn.Module):
@@ -120,7 +122,7 @@ def define_network():
         
     return AlexNet()
 
-def train_network(net, train_loader, validation_loader, optimizer, criterion, learning_rate, decay, mini_batch_size):
+def train_network(net, train_loader, validation_loader, optimizer, criterion, learning_rate, decay):
 
     for epoch in range(num_epochs):
 
@@ -143,13 +145,8 @@ def train_network(net, train_loader, validation_loader, optimizer, criterion, le
             #optimiser makes a 'step' - update parameters based on gradients
             optimizer.step()
 
-            #add loss to running loss (reset every (batch_size x mini_batch_size) images)
+            #add loss to running loss
             running_loss += loss.item()
-
-            #reset the running loss every so often
-            #if i % mini_batch_size == 0:
-                #print("Epoch " + str(epoch+1) + "/" + str(num_epochs) + " [" + str(i * batch_size) + "/2040]" + " : Loss = " + str(running_loss))
-                #running_loss = 0.0
                 
 
         #validation - once per epoch
@@ -217,7 +214,7 @@ def test_network(net, test_loader):
 #-------------MAIN------------------
 
 #Time the model
-startTime = time.time()
+startTime = datetime.now()
 
 #Load the dataset into dataloaders using the official splits
 batch_size = 64
@@ -243,17 +240,15 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=0.9)
 #optimizer = optim.Adam(net.parameters(), lr=learning_rate, weight_decay=0.001)
 
-#Define hyperparameters
-mini_batch_size = 1 #each mini-batch is batch_size (64) x mini_batch_size images
 num_epochs = 30
 
 #Train the network
-train_network(net, train_loader, validation_loader, optimizer, criterion, learning_rate, decay, mini_batch_size)
+train_network(net, train_loader, validation_loader, optimizer, criterion, learning_rate, decay)
 
 #Test the network
 test_network(net, test_loader)
 
 #Display total time to run
-endTime = time.time()
-timeDiff = startTime - endTime
-print(str(timeDiff / 60) + " minutes")
+endTime = datetime.now()
+timeDiff = endTime - startTime
+print(format(timeDiff))
