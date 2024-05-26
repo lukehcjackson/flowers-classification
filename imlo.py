@@ -14,8 +14,8 @@ import numpy as np
 #train: 1020, validation: 1020, test: 6149, total: 8189
 
 batch_size = 64 #the larger this is, the more epochs it takes for the loss to start decreasing (???)
-img_size = 200 
-img_crop = 200 
+img_size = 256
+img_crop = 224 
 #https://stackoverflow.com/questions/57815801/what-defines-legitimate-input-dimensions-of-a-pytorch-nn
 
 #transform to convert from PIL image (0 - 1) to tensors with a range of (-1 - 1)
@@ -54,7 +54,7 @@ class Net(nn.Module):
         #self.fc1 = nn.Linear(16 * 5 * 5, 120)
         #self.fc2 = nn.Linear(120, 84)
         #self.fc3 = nn.Linear(84, 103) #second argument is number of classes in dataset
-        self.fc = nn.Linear(in_features = (int(200 / 4) * int(200 / 4) * 16), out_features = 102)
+        self.fc = nn.Linear(in_features = (int(img_crop / 4) * int(img_crop / 4) * 16), out_features = 102)
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
@@ -74,9 +74,9 @@ net.to(device)
 mini_batch_size = (1020 / batch_size) // 10 #num mini-batches = divisor + 1
 #leaving this variable the same but REDUCING batch size => larger loss?
 #leaving batch size the same but increasing the divisor => MAKES NO DIFFERENCE!!!!!!!!
-num_epochs = 30
+num_epochs = 100
 
-learning_rate = 0.02
+learning_rate = 0.01
 #decay = learning_rate / num_epochs
 decay = 0.001 #increase => faster lr decreases
 
