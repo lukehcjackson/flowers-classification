@@ -14,9 +14,9 @@ import numpy as np
 #train: 1020, validation: 1020, test: 6149, total: 8189
 
 batch_size = 64 #the larger this is, the more epochs it takes for the loss to start decreasing (???)
-img_size = 32 #this can be changed (but it seems to work best at 32 - does this mean all images are scaled to 32x32? seems small)
-#16,200 => 6%, 32,32 => 13% and 10%, 16,64 => 11%, 16,32 => 11%
-img_crop = 32 #i think this has to stay at 32
+img_size = 200 
+img_crop = 200 
+#https://stackoverflow.com/questions/57815801/what-defines-legitimate-input-dimensions-of-a-pytorch-nn
 
 #transform to convert from PIL image (0 - 1) to tensors with a range of (-1 - 1)
 transform = transforms.Compose(
@@ -36,23 +36,6 @@ validation_loader = torch.utils.data.DataLoader(validation_set, batch_size=batch
 test_set = torchvision.datasets.Flowers102(root='./data', split="test", download=True, transform=transform)
 test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=True)
 
-#print(len(train_set))
-#print(len(validation_set))
-#print(len(test_set))
-
-# functions to show an image
-#def imshow(img):
-#    img = img / 2 + 0.5     # unnormalize
-#    npimg = img.numpy()
-#    plt.imshow(np.transpose(npimg, (1, 2, 0)))
-#    plt.show()
-#
-#dataiter = iter(train_loader)
-#images, labels = next(dataiter)
-##show images
-#imshow(torchvision.utils.make_grid(images))
-#print(labels)
-
 #DEFINING AND TRAINING CONVOLUTIONAL NEURAL NETWORK
 
 #training on the GPU
@@ -65,20 +48,22 @@ class Net(nn.Module):
     #neural network as before, but modified to take 3-channel images
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(3, 12, 5)
+        self.conv1 = nn.Conv2d(in_channels = 3, out_channels = 8, kernel_size = (3,3), stride = (1,1), padding = (1,1))
         self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(12, 16, 5)
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 103) #second argument is number of classes in dataset
+        self.conv2 = nn.Conv2d(in_channels = 8, out_channels = 16, kernel_size = (3,3), stride = (1,1), padding = (1,1)) #arg1 = layer1 arg2, arg2 = fc1 arg1 / kernelsize^2, arg3=kernelsize
+        #self.fc1 = nn.Linear(16 * 5 * 5, 120)
+        #self.fc2 = nn.Linear(120, 84)
+        #self.fc3 = nn.Linear(84, 103) #second argument is number of classes in dataset
+        self.fc = nn.Linear(in_features = (int(200 / 4) * int(200 / 4) * 16), out_features = 102)
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
-        x = torch.flatten(x, 1) # flatten all dimensions except batch
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
+        #x = torch.flatten(x, 1) # flatten all dimensions except batch
+        #x = F.relu(self.fc1(x))
+        #x = F.relu(self.fc2(x))
+        #x = self.fc3(x)
+        x = self.fc(x.reshape(x.shape[0], -1))
         return x
 
 #instantiate network
@@ -89,7 +74,7 @@ net.to(device)
 mini_batch_size = (1020 / batch_size) // 10 #num mini-batches = divisor + 1
 #leaving this variable the same but REDUCING batch size => larger loss?
 #leaving batch size the same but increasing the divisor => MAKES NO DIFFERENCE!!!!!!!!
-num_epochs = 100
+num_epochs = 30
 
 learning_rate = 0.02
 #decay = learning_rate / num_epochs
