@@ -28,7 +28,7 @@ def load_dataset():
     trainingTransform = transforms.Compose(
         [transforms.ToImage(),
         transforms.ToDtype(torch.uint8, scale=True),
-        transforms.RandomAffine(20, translate=(0.2, 0.2), scale=(0.75, 1.25)),
+        #transforms.RandomAffine(20, translate=(0.2, 0.2), scale=(0.75, 1.25)),
         #transforms.RandomRotation(30),
         transforms.RandomResizedCrop(size=img_crop, antialias=True),
         transforms.RandomHorizontalFlip(p=0.5),
@@ -97,9 +97,9 @@ def train_network(net, train_loader, validation_loader, optimizer, criterion, le
             running_loss += loss.item()
 
             #reset the running loss every so often
-            #if i % mini_batch_size == 0:
-                #print("Epoch " + str(epoch+1) + "/" + str(num_epochs) + " [" + str(i * batch_size) + "/2040]" + " : Loss = " + str(running_loss))
-                #running_loss = 0.0
+            if i % mini_batch_size == 0:
+                print("Epoch " + str(epoch+1) + "/" + str(num_epochs) + " [" + str(i * batch_size) + "/2040]" + " : Loss = " + str(running_loss))
+                running_loss = 0.0
                 
 
         #validation - once per epoch
@@ -184,13 +184,14 @@ print(device)
 net = define_network()
 net.to(device)
 
-learning_rate = 0.01 #0.02
+learning_rate = 0.001 #0.02
 #decay = learning_rate / num_epochs
 decay = 0.0001 #increase => faster lr decreases
 
 #define a loss function and optimiser
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=0.9)
+#optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=0.9)
+optimizer = optim.Adam(net.parameters(), lr=learning_rate, weight_decay=0.001)
 
 #Define hyperparameters
 mini_batch_size = 1 #each mini-batch is batch_size (64) x mini_batch_size images
