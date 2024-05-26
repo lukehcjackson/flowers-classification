@@ -27,6 +27,8 @@ def load_dataset():
     trainingTransform = transforms.Compose(
         [transforms.ToImage(),
         transforms.ToDtype(torch.uint8, scale=True),
+        transforms.RandomAffine(20, translate=(0.2, 0.2), scale=(0.75, 1.25)),
+        #transforms.RandomRotation(30),
         transforms.RandomResizedCrop(size=img_crop, antialias=True),
         transforms.RandomHorizontalFlip(p=0.5),
         transforms.ToDtype(torch.float32, scale=True),
@@ -36,6 +38,7 @@ def load_dataset():
     unmodified_train_set = torchvision.datasets.Flowers102(root='./data', split="train", download=True, transform=standardTransform)
     transformed_train_set = torchvision.datasets.Flowers102(root='./data', split="train", download=True, transform=trainingTransform)
     #training data set is really small so we want to increase the size of the training set => concatenate untransformed and transformed data
+    #this doubles the size of our training data
     train_set = torch.utils.data.ConcatDataset([unmodified_train_set, transformed_train_set])
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True)
 
@@ -44,10 +47,6 @@ def load_dataset():
 
     test_set = torchvision.datasets.Flowers102(root='./data', split="test", download=True, transform=standardTransform)
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=True)
-
-    print(len(train_set))
-    print(len(validation_set))
-    print(len(test_set))
 
     return train_loader, validation_loader, test_loader
 
@@ -70,13 +69,13 @@ def define_network():
         
     return Net()
 
-def train_network(net, train_loader, validation_loader, optimizer, criterion, learning_rate, decay, batch_size, mini_batch_size):
+def train_network(net, train_loader, validation_loader, optimizer, criterion, learning_rate, decay, mini_batch_size):
 
     for epoch in range(num_epochs):
 
         running_loss = 0.0
 
-        #this loop will run 1020 / batch_size number of times
+        #each iteration is a mini-batch of 'batch_size' (64) images
         for i, data in enumerate(train_loader):
             # get the inputs; data is a list of [inputs, labels]
             inputs, labels = data[0].to(device), data[1].to(device)
@@ -84,29 +83,34 @@ def train_network(net, train_loader, validation_loader, optimizer, criterion, le
             # zero the parameter gradients
             optimizer.zero_grad()
 
-            # forward + backward + optimize
+            # forward pass - put the inputs through the network
             outputs = net(inputs)
+            #calculate loss
             loss = criterion(outputs, labels)
+            #perform a backwards pass using that loss - calculate gradients
             loss.backward()
+            #optimiser makes a 'step' - update parameters based on gradients
             optimizer.step()
 
-            # print statistics
+            #add loss to running loss (reset every (batch_size x mini_batch_size) images)
             running_loss += loss.item()
 
-            if i % mini_batch_size == 0:    #WHAT IS THIS DOING? CHANGING THIS DRAMATICALLY EFFECTS THE LOSS!!
-                print("Epoch " + str(epoch+1) + "/" + str(num_epochs) + " [" + str(i * batch_size) + "/2040]" + " : Loss = " + str(running_loss))
-                running_loss = 0.0
+            #reset the running loss every so often
+            #if i % mini_batch_size == 0:
+                #print("Epoch " + str(epoch+1) + "/" + str(num_epochs) + " [" + str(i * batch_size) + "/2040]" + " : Loss = " + str(running_loss))
+                #running_loss = 0.0
                 
 
         #validation - once per epoch
         validation_loss, validation_accuracy = validate_network(net, validation_loader, criterion)
 
         print("Epoch " + str(epoch+1) + "/" + str(num_epochs) +
-                #" Training Loss = " + str(running_loss/mini_batch_size) +
                 " Validation Loss = " + str(round(validation_loss ,5)) +
                 " Validation Accuracy = " + str((round(validation_accuracy, 5))*100) + "%" )
 
+        #apply a time-based learning rate schedule
         learning_rate = learning_rate * (1 / (1 + decay * epoch))
+        #update the actual learning rate in the model
         for group in optimizer.param_groups:
             group['lr'] = learning_rate
         print("Learning rate:", learning_rate)
@@ -120,13 +124,17 @@ def validate_network(net, validation_loader, criterion):
 
     net.eval()
 
+    #very similar to final testing loop, but on the validation set
     with torch.no_grad():
         for i,data in enumerate(validation_loader):
             vimages, vlabels = data[0].to(device), data[1].to(device)
+            # calculate outputs by running images through the network
             voutputs = net(vimages)
 
+            #add to loss
             validation_loss += criterion(voutputs, vlabels).item()
 
+            # the class with the highest energy is what we choose as prediction
             _, predicted = torch.max(voutputs.data, 1)
             total += vlabels.size(0)
             correct += (predicted == vlabels).sum().item()
@@ -137,19 +145,6 @@ def validate_network(net, validation_loader, criterion):
     validation_accuracy = correct / total
     return validation_loss, validation_accuracy
 
-"""
-    for i, data in enumerate(validation_loader):
-        inputs, labels = data[0].to(device), data[1].to(device)
-        outputs = net(inputs)
-        validation_loss += criterion(outputs, labels).item()
-        # Calculate probability
-        ps = torch.exp(outputs)
-        # Calculate accuracy
-        equality = (labels.data == ps.max(dim=1)[1])
-        validation_accuracy += equality.type(torch.FloatTensor).mean()
-
-    return validation_loss, validation_accuracy.item()
-"""
 def test_network(net, test_loader):
     #make predictions for the whole dataset
     correct = 0
@@ -157,9 +152,6 @@ def test_network(net, test_loader):
     # since we're not training, we don't need to calculate the gradients for our outputs
     with torch.no_grad():
         for data in test_loader:
-            #FOR CPU: 
-            #images, labels = data
-            #FOR GPU:
             images, labels = data[0].to(device), data[1].to(device)
             # calculate outputs by running images through the network
             outputs = net(images)
@@ -168,7 +160,7 @@ def test_network(net, test_loader):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
-    print(f'Accuracy of the network on the 6149 test images: {100 * correct // total} %')
+    print(f'Accuracy of the network on the 6149 test images: {100 * round(correct / total,1)} %')
 
 
 #-------------MAIN------------------
@@ -201,7 +193,7 @@ mini_batch_size = 1 #each mini-batch is batch_size (64) x mini_batch_size images
 num_epochs = 100
 
 #Train the network
-train_network(net, train_loader, validation_loader, optimizer, criterion, learning_rate, decay, batch_size, mini_batch_size)
+train_network(net, train_loader, validation_loader, optimizer, criterion, learning_rate, decay, mini_batch_size)
 
 #Test the network
 test_network(net, test_loader)
