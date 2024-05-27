@@ -229,7 +229,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=0.9)
 #optimizer = optim.Adam(net.parameters(), lr=learning_rate, weight_decay=0.001)
 
-num_epochs = 75
+num_epochs = 100
 
 #Train the network
 train_network(net, train_loader, validation_loader, optimizer, criterion, learning_rate, decay, loading_model)
