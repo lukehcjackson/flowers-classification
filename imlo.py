@@ -109,8 +109,6 @@ def train_network(net, train_loader, validation_loader, optimizer, criterion, le
 
     for epoch in range(num_epochs):
 
-        running_loss = 0.0
-
         #each iteration is a mini-batch of 'batch_size' (64) images
         for i, data in enumerate(train_loader):
             # get the inputs; data is a list of [inputs, labels]
@@ -185,8 +183,6 @@ def test_network(net, test_loader, loading_model):
     correct = 0
     total = 0
 
-    
-
     # since we're not training, we don't need to calculate the gradients for our outputs
     with torch.no_grad():
         for data in test_loader:
@@ -225,9 +221,8 @@ print(device)
 net = define_network()
 net.to(device)
 
-learning_rate = 0.01 #0.02
-#decay = learning_rate / num_epochs
-decay = 0.0001 #increase => faster lr decreases
+learning_rate = 0.01
+decay = 0.001 #increase => faster lr decreases
 
 #define a loss function and optimiser
 criterion = nn.CrossEntropyLoss()
