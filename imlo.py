@@ -7,8 +7,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-import matplotlib.pyplot as plt
-import numpy as np
 from datetime import datetime
 
 def load_dataset():
@@ -28,8 +26,8 @@ def load_dataset():
     trainingTransform = transforms.Compose(
         [transforms.ToImage(),
         transforms.ToDtype(torch.uint8, scale=True),
-        #transforms.RandomAffine(20, translate=(0.2, 0.2), scale=(0.75, 1.25)),
-        transforms.RandomRotation(30),
+        #transforms.RandomAffine(30, translate=(0.2, 0.2), scale=(0.75, 1.25)),
+        #transforms.RandomRotation(30),
         transforms.RandomResizedCrop(size=img_crop, antialias=True),
         transforms.RandomHorizontalFlip(p=0.5),
         transforms.ToDtype(torch.float32, scale=True),
@@ -44,32 +42,14 @@ def load_dataset():
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True)
 
     validation_set = torchvision.datasets.Flowers102(root='./data', split="val", download=True, transform=standardTransform)
-    validation_loader = torch.utils.data.DataLoader(validation_set, batch_size=batch_size, shuffle=False)
+    validation_loader = torch.utils.data.DataLoader(validation_set, batch_size=batch_size, shuffle=True)
 
     test_set = torchvision.datasets.Flowers102(root='./data', split="test", download=True, transform=standardTransform)
-    test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False)
+    test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=True)
 
     return train_loader, validation_loader, test_loader
 
 def define_network():
-    #Define CNN
-    """
-    class Net(nn.Module):
-        #neural network as before, but modified to take 3-channel images
-        def __init__(self):
-            super().__init__()
-            self.conv1 = nn.Conv2d(in_channels = 3, out_channels = 8, kernel_size = (3,3), stride = (1,1), padding = (1,1))
-            self.pool = nn.MaxPool2d(2, 2)
-            self.conv2 = nn.Conv2d(in_channels = 8, out_channels = 16, kernel_size = (3,3), stride = (1,1), padding = (1,1))
-            self.fc = nn.Linear(in_features = (int(img_crop / 4) * int(img_crop / 4) * 16), out_features = 102)
-
-        def forward(self, x):
-            x = self.pool(F.relu(self.conv1(x)))
-            x = self.pool(F.relu(self.conv2(x)))
-            x = self.fc(x.reshape(x.shape[0], -1))
-            return x
-    """
-        
     #Implementation of AlexNet
     class AlexNet(nn.Module):
         def __init__(self):
@@ -122,7 +102,10 @@ def define_network():
         
     return AlexNet()
 
-def train_network(net, train_loader, validation_loader, optimizer, criterion, learning_rate, decay):
+def train_network(net, train_loader, validation_loader, optimizer, criterion, learning_rate, decay, loading_model):
+
+    if loading_model:
+        return
 
     for epoch in range(num_epochs):
 
@@ -144,9 +127,6 @@ def train_network(net, train_loader, validation_loader, optimizer, criterion, le
             loss.backward()
             #optimiser makes a 'step' - update parameters based on gradients
             optimizer.step()
-
-            #add loss to running loss
-            running_loss += loss.item()
                 
 
         #validation - once per epoch
@@ -164,6 +144,7 @@ def train_network(net, train_loader, validation_loader, optimizer, criterion, le
         print("Learning rate:", learning_rate)
 
     print('Finished Training')
+    torch.save(net.state_dict(), "model.pth")
 
 def validate_network(net, validation_loader, criterion):
     validation_loss = 0
@@ -193,10 +174,19 @@ def validate_network(net, validation_loader, criterion):
     validation_accuracy = correct / total
     return validation_loss, validation_accuracy
 
-def test_network(net, test_loader):
+def test_network(net, test_loader, loading_model):
+
+    if loading_model:
+        print("Loading model")
+        net.load_state_dict(torch.load("model.pth"))
+        net.eval()
+
     #make predictions for the whole dataset
     correct = 0
     total = 0
+
+    
+
     # since we're not training, we don't need to calculate the gradients for our outputs
     with torch.no_grad():
         for data in test_loader:
@@ -208,10 +198,14 @@ def test_network(net, test_loader):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
-    print(f'Accuracy of the network on the 6149 test images: {100 * round(correct / total,1)} %')
+    print(f'Accuracy of the network on the 6149 test images: {100 * round(correct / total,5)} %')
 
 
 #-------------MAIN------------------
+
+####CHANGE WHETHER YOU ARE LOADING A MODEL OR TRAINING ONE HERE#######
+loading_model = False
+######################################################################
 
 #Time the model
 startTime = datetime.now()
@@ -240,15 +234,15 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=0.9)
 #optimizer = optim.Adam(net.parameters(), lr=learning_rate, weight_decay=0.001)
 
-num_epochs = 30
+num_epochs = 50
 
 #Train the network
-train_network(net, train_loader, validation_loader, optimizer, criterion, learning_rate, decay)
+train_network(net, train_loader, validation_loader, optimizer, criterion, learning_rate, decay, loading_model)
 
 #Test the network
-test_network(net, test_loader)
+test_network(net, test_loader, loading_model)
 
-#Display total time to run
+##Display total time to run
 endTime = datetime.now()
 timeDiff = endTime - startTime
-print(format(timeDiff))
+print("Time to execute: " + format(timeDiff))
